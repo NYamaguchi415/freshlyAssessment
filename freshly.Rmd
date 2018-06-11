@@ -157,6 +157,7 @@ A clustering technique called K-Means was used to segment the users based on pat
 
 The table shows the number of users that fall into each of the clusters in the user_count column. The other columns provide the average values of the metric for the users within each cluster. 
 
+(note: After adjusting the number of clusters the table and plot will take some time to reload.)
 ```{r cluster, echo = FALSE }
 # Set seed for reproducibility
 set.seed(100)
