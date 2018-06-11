@@ -53,7 +53,7 @@ str(originalDf)
 # Because all of the variables are continuous, we can easily view summary statistics of the entire dataset. This also displays that there are no NA values in any of the columns. 
 summary(originalDf)
 
-# A simple cleanliness check to see if any users are duplicated. We can group the data by user_id and counting the number of rows for each.
+# A simple cleanliness check to see if any users are duplicated. We can group the data by user_id and count the number of rows for each.
 originalDf %>% 
   group_by(user_id) %>%
   summarize(count = n()) %>%
@@ -107,7 +107,7 @@ renderPlot({
   ggplot(originalDf, aes(x=var)) +
     geom_histogram(color = 'white', fill = 'light blue', bins = input$histBins) +
     xlab(input$histVariable)
-})
+}, width = 500, height = 300)
 ```
 <!-- avg_rating: Uniform distribution with slight drop off at the end values -->
 
@@ -196,8 +196,8 @@ renderUI({
   list(
       renderTable(clustMeans),
       fluidRow(
-        column(6, renderPlot(plot1)),
-        column(6, renderPlot(plot2))
+        column(6, renderPlot(plot1, height = 300)),
+        column(6, renderPlot(plot2, height = 300))
       )
   )
 })
@@ -241,8 +241,8 @@ plot_avg_time_spent = ggplot(lmDf, aes(x=lifetime_value, y = avg_time_spent)) +
 
 renderUI({
   list(
-    column(6, renderPlot(plot_avg_rating)),
-    column(6, renderPlot(plot_avg_time_spent))
+    column(6, renderPlot(plot_avg_rating, height = 300)),
+    column(6, renderPlot(plot_avg_time_spent, height = 300))
   )
 })
 ```
