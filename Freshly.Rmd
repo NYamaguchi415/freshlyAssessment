@@ -1,0 +1,288 @@
+---
+# title: "FreshlyAssessment"
+title: "Freshly Customer Analysis"
+author: "Naoki Yamaguchi"
+date: "6/8/2018"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<!-- To learn more, see [Interactive Documents](http://rmarkdown.rstudio.com/authoring_shiny.html). -->
+
+Loading initial packages:
+```{r packages, message = FALSE, warning = FALSE}
+library(dplyr)
+library(ggplot2)
+```
+
+
+## Data Exploration
+
+The source data for this analysis is a single csv, which was provided by Freshly. 
+
+Data Definitions:
+
+ - user_id - unique identifier for users
+ 
+ - avg_rating - the average rating given to meals on a 1-5 scale 
+ 
+ - mobile_visits - the total number of sessions through our mobile app
+ 
+ - avg_time_spent - the average number of minutes across all sessions
+ 
+ - monthly_avg_sessions - average number of sessions per month for the customer’s subscription lifetime
+ 
+ - visits - the total number of sessions via the website
+ 
+ - lifetime_value - the total net revenue earned minus acquisition costs
+
+
+The data is loaded in and we first evaluate the structure and cleanliness of the data.
+```{r initialLoad}
+# Load in dataset
+originalDf = read.csv('freshly_test_data.csv')
+
+# Get an understanding of the structure of the dataset
+# We see that there are 100000 records and 7 variables including the user_id
+str(originalDf)
+
+# Because all of the variables are continuous, we can easily view summary statistics of the entire dataset. This also displays that there are no NA values in any of the columns. 
+summary(originalDf)
+
+# A simple cleanliness check to see if any users are duplicated. We can group the data by user_id and counting the number of rows for each.
+originalDf %>% 
+  group_by(user_id) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count)) %>%
+  head()
+```
+
+## Detailed Distribution & Summary Stats
+```{r summaryStatsDisplayCode, eval=FALSE}
+# Vector of column names to be used in dynamic input
+cols = names(originalDf) %>% setdiff(.,'user_id')
+
+# Create dynamic inputs for variable and number of breaks selection
+inputPanel(
+  selectInput('histVariable', label= 'Variable:',
+              choices = cols, selected = 'avg_rating'),
+  sliderInput('histBins', label= 'Breaks: ', min = 5, max = 50, value = 20, step = 5)
+)
+
+# Display summary stats for selected variable
+renderPrint({
+  summary(originalDf[[input$histVariable]])
+})
+
+# Plot histogram for selected variable + breaks
+renderPlot({
+  var = originalDf[[input$histVariable]]
+  ggplot(originalDf, aes(x=var)) +
+    geom_histogram(color = 'white', fill = 'light blue', bins = input$histBins) +
+    xlab(input$histVariable)
+})
+```
+
+The drop down menu below allows for a selection of the variable you want to view summary statistics and histogram for. The slider allows for dynamic selection of breaks to be used in the histogram.  
+
+```{r summaryStats, echo=FALSE}
+cols = names(originalDf) %>% setdiff(.,'user_id')
+
+inputPanel(
+  selectInput('histVariable', label= 'Variable:',
+              choices = cols, selected = 'avg_rating'),
+  sliderInput('histBins', label = 'Breaks: ', min = 5, max = 50, value = 20, step = 5)
+)
+
+renderPrint({
+  summary(originalDf[[input$histVariable]])
+})
+
+renderPlot({
+  var = originalDf[[input$histVariable]]
+  ggplot(originalDf, aes(x=var)) +
+    geom_histogram(color = 'white', fill = 'light blue', bins = input$histBins) +
+    xlab(input$histVariable)
+})
+```
+<!-- avg_rating: Uniform distribution with slight drop off at the end values -->
+
+<!-- mobile_visits: Normal distribution (mean = 8.5) -->
+
+<!-- average_time_spent: Normal distribution (mean = 12.5) -->
+
+<!-- monthly_avg_sessions:  -->
+
+
+## Customer Segmentations
+
+```{r clusterCodeDisplay, eval = FALSE }
+# Set seed for reproducibility
+set.seed(100)
+
+# Scale all variables in the dataframe and deselect user_id
+clustDf = originalDf
+scaledDf = as.data.frame(scale(clustDf %>% select(-user_id)))
+
+inputPanel(
+  sliderInput('clustClusters', label= 'Number of Clusters:',
+              min = 2, max = 6, value = 3, step = 1)
+)
+
+renderTable({
+  # Cluster data into n clusters based on user input
+  clusters = kmeans(scaledDf, input$clustClusters, nstart = 20)
+  clustDf$cluster = as.factor(clusters$cluster)
+  
+  # Group by cluster and calculate means for every variable
+  clustMeans = originalDf %>%
+    group_by(cluster) %>%
+    summarize(user_count = sum(!is.na(user_id)),
+              avg_rating = mean(avg_rating),
+              mobile_visits = mean(mobile_visits),
+              avg_time_spent = mean(avg_time_spent),
+              monthly_avg_sessions = mean(monthly_avg_sessions),
+              visits = mean(visits),
+              lifetime_value = mean(lifetime_value))
+  
+  clustMeans
+})
+```
+
+A clustering technique called K-Means was used to segment the users based on patterns within the data. The number of clusters can be adjusted using the slider.
+
+The table shows the number of users that fall into each of the clusters in the user_count column. The other columns provide the average values of the metric for the users within each cluster. 
+
+```{r cluster, echo = FALSE }
+# Set seed for reproducibility
+set.seed(100)
+
+# Scale all variables in the dataframe and deselect user_id
+clustDf = originalDf
+scaledDf = as.data.frame(scale(clustDf %>% select(-user_id)))
+
+inputPanel(
+  sliderInput('clustClusters', label= 'Number of Clusters:',
+              min = 2, max = 6, value = 3, step = 1)
+)
+
+renderUI({
+  # Cluster data into n clusters based on user input
+  clusters = kmeans(scaledDf, input$clustClusters, nstart = 20)
+  clustDf$cluster = as.factor(clusters$cluster)
+  
+  # Group by cluster and calculate means for every variable
+  clustMeans = clustDf %>%
+    group_by(cluster) %>%
+    summarize(user_count = sum(!is.na(user_id)),
+              avg_rating = mean(avg_rating),
+              mobile_visits = mean(mobile_visits),
+              avg_time_spent = mean(avg_time_spent),
+              monthly_avg_sessions = mean(monthly_avg_sessions),
+              visits = mean(visits),
+              lifetime_value = mean(lifetime_value))
+  
+  plot1 = ggplot(clustDf, aes(x = lifetime_value, y = avg_rating)) + 
+    geom_point(aes(color = cluster))
+    
+  
+  plot2 = ggplot(clustDf, aes(x = avg_rating, y = visits)) + 
+    geom_point(aes(color = cluster))
+  
+  list(
+      renderTable(clustMeans),
+      fluidRow(
+        column(6, renderPlot(plot1)),
+        column(6, renderPlot(plot2))
+      )
+  )
+})
+
+
+
+```
+
+When segmenting the data into 3 clusters, you can see that the users get split into:
+
+ - Users with lower lifetime_value. These customers don't seem happy with the meals, as their ratings are much lower than the other 2 clusters.
+ 
+ - Users with high lifetime_value with a high amount of visits. Since the monthly_avg_sessions are equal, I imagine this indicates that these are users who have been subscribed for a longer period of time. 
+ 
+ - Users with high lifetime_value with a low amount of visits. New subscribers?
+
+As we push the segmentation into 5 clusters, we're able to see more distinct differences between the original 3 clusters. The 2 new clusters draw out users that belong in sort of the "middle ground". They both seem like a very average group based on their lifetime_value and avg_rating, but one item that stands out is the monthly_avg_sessions for the smaller cluster. The monthly_avg_sessions is much higher than any of the other clusters, so it seems to be a very active group. 
+
+
+
+## Variable Importance For Lifetime Value
+
+To understand which variables are predictive of lifetime value, it's important to
+
+Linear Regression allows for very interpretable results
+
+
+```{r correlations}
+lmDf = originalDf 
+
+# View correlations 
+round(cor(lmDf), 3)
+```
+We use the lifetime_value column to see what independent variables display some correlation. We see that avg_rating and avg_time_spent both show high values, which is a good sign. 
+``` {r correlated_plots}
+plot_avg_rating = ggplot(lmDf, aes(x=lifetime_value, y = avg_rating)) +
+    geom_point(color = 'light blue')
+
+plot_avg_time_spent = ggplot(lmDf, aes(x=lifetime_value, y = avg_time_spent)) +
+    geom_point(color = 'light blue')
+
+renderUI({
+  list(
+    column(6, renderPlot(plot_avg_rating)),
+    column(6, renderPlot(plot_avg_time_spent))
+  )
+})
+```
+
+Both avg_rating and avg_time_spent visibly show the positive correlation with lifetime_value that we noticed in the previous table. We can run everything in a linear regression to see if we see predictive power in these variables.
+
+``` {r regression}
+options(scipen=4)
+
+# Linear Regression 
+lv.lm = lm(lifetime_value ~ . - user_id , lmDf)
+summary(lv.lm)
+```
+
+The coefficient for avg_time_spent ends up negative when it's included in the model together with avg_rating. We know this is strange since we noted it's positive correlation with lifetime_value previously. This occurs due to correlation between avg_rating and avg_time_spent. In order to build a good predictive model we would need to drop one, but since the question is simply to find what variables are good predictors of lifetime_value, it may be better just to test each variable independently. I'm also creating my own variable "mobile_visit_ratio" to test. 
+
+``` {r single_var_regressions}
+# Create mobile visit ratio variable
+lmDf = lmDf %>%
+  mutate(mobile_visit_ratio = mobile_visits / (mobile_visits + visits))
+
+# Creating a vector of variables excluding user_id and lifetime_value
+vars = setdiff(names(lmDf), c('user_id', 'lifetime_value'))
+
+# Linear Regressions on each of the variables in vars
+for (var in vars) {
+  lv.formula = paste0('lifetime_value ~ ', var)
+  lv.lm = lm(lv.formula, lmDf)
+  coef = lv.lm$coefficients[[var]]
+  p_val = summary(lv.lm)$coefficients[,4][[var]]
+  result = sprintf('%s: coefficient = %s, p_value = %s', var, round(coef, 3), round(p_val, 3)) 
+  print(result)
+}
+```
+
+We can see that avg_rating, avg_time_spent and mobile_visit_ratio are all significant predictors of lifetime_value with a positive relationship. 
+
+ - avg_rating: It makes sense that users who enjoy the meals are more likely to be longer term subscribers. 
+ 
+ - avg_time_spent: It seems people who are more actively engaged with the site are likely to have higher lifetime_value.
+ 
+ - mobile_visit_ratio: This one is interesting. It shows that users who prefer visiting through the mobile app over desktop are more likely to have higher lifetime_value. It raises questions that would require more research. Is the mobile user experience better than desktop? Are mobile users more engaged? Are mobile users  a younger demographic and it's actually their age that correlates with lifetime_value?
+
