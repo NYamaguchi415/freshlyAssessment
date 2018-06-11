@@ -221,10 +221,7 @@ As we push the segmentation into 5 clusters, we're able to see more distinct dif
 
 ## Variable Importance For Lifetime Value
 
-To understand which variables are predictive of lifetime value, it's important to
-
-Linear Regression allows for very interpretable results
-
+Linear Regression was used to understand which variables are predictive of lifetime value due to it's interpretability.
 
 ```{r correlations}
 lmDf = originalDf 
@@ -232,7 +229,7 @@ lmDf = originalDf
 # View correlations 
 round(cor(lmDf), 3)
 ```
-We use the lifetime_value column to see what independent variables display some correlation. We see that avg_rating and avg_time_spent both show high values, which is a good sign. 
+We use the lifetime_value column in the table above to see what independent variables display some correlation. We see that avg_rating and avg_time_spent both show high values, which is a good sign. 
 ``` {r correlated_plots}
 plot_avg_rating = ggplot(lmDf, aes(x=lifetime_value, y = avg_rating)) +
     geom_point(color = 'light blue')
