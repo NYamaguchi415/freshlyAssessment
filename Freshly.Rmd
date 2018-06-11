@@ -44,7 +44,7 @@ Data Definitions:
 The data is loaded in and we first evaluate the structure and cleanliness of the data.
 ```{r initialLoad}
 # Load in dataset
-originalDf = read.csv('freshly_test_data.csv')
+originalDf = read.csv('./data/freshly_test_data.csv')
 
 # Get an understanding of the structure of the dataset
 # We see that there are 100000 records and 7 variables including the user_id
