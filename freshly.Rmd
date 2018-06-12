@@ -284,3 +284,45 @@ We can see that avg_rating, avg_time_spent and mobile_visit_ratio are all signif
  
  - mobile_visit_ratio: This one is interesting. It shows that users who prefer visiting through the mobile app over desktop are more likely to have higher lifetime_value. It raises questions that would require more research. Is the mobile user experience better than desktop? Are mobile users more engaged? Are mobile users  a younger demographic and it's actually their age that correlates with lifetime_value?
 
+In order to create a predictive model, we would want to split the data into a training and testing set. 
+
+``` {r linear_reg_model}
+# train-test splitting
+library(caTools)
+set.seed(100)
+sample = sample.split(lmDf$lifetime_value, SplitRatio=.70)
+train = subset(lmDf, sample==TRUE)
+test = subset(lmDf, sample==FALSE)
+
+# train model with everything except for user_id
+lv.lm2 = lm(lifetime_value ~ . -user_id, data = train)
+
+summary(lv.lm2)
+```
+The model shows that avg_time_spent is not significant. We were looking to exclude this feature anyway due to it's high correlation with avg_rating. We'll test removing monthly_avg_sessions as well.
+
+```{r}
+# Calculating MSE for all variables as baseline
+pred2 = predict(lv.lm2, test)
+MSE2 = mean((pred2 - test$lifetime_value)^2)
+MSE2
+
+# Excluding avg_time_spent and monthly_avg_sessions from the model
+lv.lm3 = lm(lifetime_value ~ . -user_id -avg_time_spent -monthly_avg_sessions, data = train)
+pred3 = predict(lv.lm3, test)
+MSE3 = mean((pred3 - test$lifetime_value)^2)
+summary(lv.lm3)
+MSE3
+```
+
+Excluding the two variables did not cause a large increase in MSE, so it's better to select the simpler model. 
+
+From here, I created multiple models with differing combinations of the remaining variables which I did not include due to the repetitiveness of the code. In the end, I think I would actually push for the simplest model of just predicting lifetime_value based on avg_rating. It increases the MSE from 6.17 to 6.22, but I prefer it because it gets rid of multicolinearity and counfounding effects.
+
+```{r}
+lv.lm4 = lm(lifetime_value ~ avg_rating, data = train)
+summary(lv.lm4)
+pred4 = predict(lv.lm4, test)
+MSE4 = mean((pred4 - test$lifetime_value)^2)
+MSE4
+```
