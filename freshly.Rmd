@@ -284,6 +284,8 @@ We can see that avg_rating, avg_time_spent and mobile_visit_ratio are all signif
  
  - mobile_visit_ratio: This one is interesting. It shows that users who prefer visiting through the mobile app over desktop are more likely to have higher lifetime_value. It raises questions that would require more research. Is the mobile user experience better than desktop? Are mobile users more engaged? Are mobile users  a younger demographic and it's actually their age that correlates with lifetime_value?
 
+
+## Predictive Model
 In order to create a predictive model, we would want to split the data into a training and testing set. 
 
 ``` {r linear_reg_model}
